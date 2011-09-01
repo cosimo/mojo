@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use Mojo::Base -strict;
 
-use Test::More tests => 139;
+use Test::More tests => 153;
 
 # "What good is money if it can't inspire terror in your fellow man?"
 use_ok 'Mojo::Cookie::Request';
@@ -134,6 +134,31 @@ is $cookies->[1]->value,   'la la', 'right value';
 is $cookies->[1]->path,    '/tset', 'right path';
 is $cookies->[1]->version, '1',     'right version';
 is $cookies->[2], undef, 'no more cookies';
+
+# Parse multiple cookie request alternate syntax
+$cookies = Mojo::Cookie::Request->parse(
+    '$Version=1, foo=bar; $Path=/test, baz=la la; $Path=/tset');
+
+is $cookies->[0]->name,    'foo',   'right name';
+is $cookies->[0]->value,   'bar',   'right value';
+is $cookies->[0]->path,    '/test', 'right path';
+is $cookies->[0]->version, '1',     'right version';
+is $cookies->[1]->name,    'baz',   'right name';
+is $cookies->[1]->value,   'la la', 'right value';
+is $cookies->[1]->path,    '/tset', 'right path';
+is $cookies->[1]->version, '1',     'right version';
+
+# Salesforce broken cookies
+$cookies = Mojo::Cookie::Request->parse(
+    '__kti=1314271210320,http%3A%2F%2Fwww.kraih.com%2F,; __ktv=acf5-6baa-f861-434013200ab2b50;');
+
+is $cookies->[0]->name,    '__kti', 'right name';
+is $cookies->[0]->value,   '1314271210320,http%3A%2F%2Fwww.kraih.com%2F,', 'right value';
+is $cookies->[0]->version, '1',     'right version';
+
+is $cookies->[1]->name,    '__ktv', 'right name';
+is $cookies->[1]->value,   'acf5-6baa-f861-434013200ab2b50', 'right value';
+is $cookies->[1]->version, '1',     'right version';
 
 # Response cookie as string
 $cookie = Mojo::Cookie::Response->new;
