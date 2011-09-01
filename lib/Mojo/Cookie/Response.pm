@@ -2,7 +2,7 @@ package Mojo::Cookie::Response;
 use Mojo::Base 'Mojo::Cookie';
 
 use Mojo::Date;
-use Mojo::Util 'unquote';
+use Mojo::Util qw/quote unquote/;
 
 has [qw/comment domain httponly max_age port secure/];
 
@@ -21,6 +21,9 @@ my $FIELD_RE = qr/
   )
 /xmsi;
 my $FLAG_RE = qr/(?:Secure|HttpOnly)/i;
+
+# RFC 2616 "token"
+my $NEEDS_QUOTES_RE = qr/[^A-Za-z0-9\-\.\_\~]/;
 
 sub expires {
   my ($self, $expires) = @_;
@@ -86,7 +89,12 @@ sub to_string {
   return '' unless $self->name;
   my $cookie = $self->name;
   my $value  = $self->value;
-  $cookie .= defined $value ? "=$value" : '=';
+  if (defined $value && $value ne '') {
+    if ($value =~ $NEEDS_QUOTES_RE) { quote $value }
+    $cookie .= "=$value";
+  }
+  else { $cookie .= "=" }
+
   $cookie .= sprintf "; Version=%d", ($self->version || 1);
 
   # Domain
@@ -115,7 +123,10 @@ sub to_string {
   if (my $httponly = $self->httponly) { $cookie .= "; HttpOnly" }
 
   # Comment
-  if (my $comment = $self->comment) { $cookie .= "; Comment=$comment" }
+  if (my $comment = $self->comment) {
+    if ($comment =~ $NEEDS_QUOTES_RE) { quote $comment }
+    $cookie .= "; Comment=$comment"
+  }
 
   return $cookie;
 }

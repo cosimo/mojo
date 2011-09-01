@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use Mojo::Base -strict;
 
-use Test::More tests => 139;
+use Test::More tests => 146;
 
 # "What good is money if it can't inspire terror in your fellow man?"
 use_ok 'Mojo::Cookie::Request';
@@ -141,7 +141,7 @@ $cookie->name('foo');
 $cookie->value('ba r');
 $cookie->path('/test');
 $cookie->version(1);
-is $cookie->to_string, 'foo=ba r; Version=1; Path=/test', 'right format';
+is $cookie->to_string, 'foo="ba r"; Version=1; Path=/test', 'right format';
 
 # Response cookie without value as string
 $cookie = Mojo::Cookie::Response->new;
@@ -170,7 +170,7 @@ $cookie->httponly(1);
 $cookie->comment('lalalala');
 $cookie->version(1);
 is $cookie->to_string,
-    'foo=ba r; Version=1; Domain=kraih.com; Path=/test;'
+    'foo="ba r"; Version=1; Domain=kraih.com; Path=/test;'
   . ' Max-Age=60; expires=Thu, 07 Aug 2008 07:07:59 GMT;'
   . ' Port="80 8080"; Secure; HttpOnly; Comment=lalalala', 'right format';
 
@@ -297,3 +297,23 @@ is $cookies->[0]->secure,  '1',        'right secure flag';
 is $cookies->[0]->comment, 'lalalala', 'right comment';
 is $cookies->[0]->version, '1',        'right version';
 is $cookies->[1], undef, 'no more cookies';
+
+# Round trip test with quoted values
+$cookie = Mojo::Cookie::Response->new;
+$cookie->name('user');
+$cookie->value('firstname lastname');
+$cookie->path('/');
+$cookie->comment('This is a test');
+$cookie->version(1);
+is $cookie->to_string, 'user="firstname lastname"; Version=1; Path=/; Comment="This is a test"',
+    'Values with spaces need to be quoted';
+
+# Parse it back now
+$cookies = Mojo::Cookie::Response->parse($cookie->to_string);
+is $cookies->[0]->name,    'user', 'right name';
+is $cookies->[0]->value,   'firstname lastname', 'value is parsed back and stripped of quote chars';
+is $cookies->[0]->path,    '/', 'right path';
+is $cookies->[0]->comment, 'This is a test', 'right comment';
+is $cookies->[0]->version, '1', 'right version';
+is $cookies->[1], undef, 'no more cookies expected';
+
